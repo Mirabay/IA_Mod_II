@@ -6,32 +6,34 @@ import time
 import sys
 import os
 os.system('cls' if os.name == 'nt' else 'clear')
-
 import warnings
+
+
 #########################################################################
 #                               ETL                                     #
 #########################################################################
-df_mixed = pd.read_csv('Data_Sets\Delicates.csv')
-df_cottons = pd.read_csv('Data_Sets\Jeans.csv')
+cycle1 = pd.read_csv('Data_Sets\Delicates.csv')
+cycle2 = pd.read_csv('Data_Sets\Jeans.csv')
 
-# n = 120 # los primeros 3 minutos no se consideran
-# df_mixed = df_mixed[df_mixed['Time(min)']>n]
-# df_cottons = df_cottons[df_cottons['Time(min)']>n]
+
+n = 5 # los primeros 3 minutos no se consideran
+cycle1 = cycle1[cycle1['Time(min)']>n]
+cycle2 = cycle2[cycle2['Time(min)']>n]
 
 # El peso es un factor importante en el comportamiento
 # de la secadora.
 w1 = 2
 w2 = 20
 # incluir peso 1 y peso 2
-df_mixed = df_mixed[(df_mixed['Weight']>=w1) & (df_mixed['Weight']<=w2)]
-df_cottons = df_cottons[(df_cottons['Weight']>=w1) & (df_cottons['Weight']<=w2)]
+cycle1 = cycle1[(cycle1['Weight']>=w1) & (cycle1['Weight']<=w2)]
+cycle2 = cycle2[(cycle2['Weight']>=w1) & (cycle2['Weight']<=w2)]
 
-df_mixed['Class']= 0 # 0 para mixed
-df_cottons['Class']= 1 # 1 para cottons
+cycle1['Class']= 0 # 0 para mixed
+cycle2['Class']= 1 # 1 para cottons
 
 
 # Concatenar los dataframes para poder hacer la clasificacion
-df = pd.concat([df_mixed, df_cottons], axis=0)
+df = pd.concat([cycle1, cycle2], axis=0)
 
 df = df.drop(columns=['Weight','Segment','RDB','Restriction','Energy','Potenza','Smooth','T-A amb','RH amb'])
 
@@ -118,20 +120,24 @@ def Gradiente_Descendiente(params, bias, samples, y, alfa):
 def train(params, bias, samples, y, learning_rate, epochs):
     global __errors__
 
-    val_samples = samples[:int(len(samples)*0.8)]
-    val_y = y[:int(len(y)*0.8)]
+    val_samples = samples[:int(len(samples)*0.99)]
+    val_y = y[:int(len(y)*0.99)]
+    
     for epoch in range(int(epochs)):
         # Actualizar parámetros
         params, bias = Gradiente_Descendiente(params, bias, samples, y, learning_rate)
         # Mostrar errores
         error = CostFunction(params, samples, bias, y)
-        val_error = validate(params, bias, val_samples, val_y)
-        sys.stdout.write(f'\rEpoch: {(epoch/epochs)*100:.2f}%, Loss: {error*100:.2f}%, Validation Error: {100-val_error*100:.2f}%')
+        val_accuracy = validate(params, bias, val_samples, val_y)
+        sys.stdout.write(f'\rEpoch: {(epoch/epochs)*100:.2f}%,Loss: {error*100:.2f}%,Validation Acurracy: {val_accuracy*100:.2f}%')
+        
         sys.stdout.flush()
         time.sleep(1e-99)  # Simul1ear tiempo de entrenamientoe
+        
         # Condición para detener el entrenamiento
         if len(__errors__) > 1 and abs(__errors__[-1] - __errors__[-2]) < 1e-5 :
             break
+    
     # Graficar errores
     plt.plot(range(len(__errors__)), __errors__)
     plt.plot(range(len(__errors__)), [0.5] * len(__errors__), '--r')
@@ -139,12 +145,19 @@ def train(params, bias, samples, y, learning_rate, epochs):
     plt.xlabel('Epochs')
     plt.ylabel('Error')
     plt.show()
-    print(f'\nParams: {params} + Bias: {bias:.2f}')
-    print(f'Error: {error * 100:.1f}%')
+    
+    # Mostrar graficas de validación
+    print('\nValidation:')
+    val_hyp = h(params, val_samples, bias)
+    val_accuracy = np.mean(val_hyp.round() == val_y)
+    print(f'Validation Accuracy: {val_accuracy * 100:.1f}%')
+    confusionMat(val_y, val_hyp.round())
+    roc_curve(val_y, val_hyp)
+    
     return params, bias
 
 def test(params, bias, samples, y):
-    samples = scale_features(samples)
+    print('\nTest:')
     hyp = h(params, samples, bias)
     accuracy = np.mean(hyp.round() == y)
     print(f'Accuracy: {accuracy * 100:.1f}%')
@@ -179,6 +192,7 @@ def confusionMat(y, y_pred):
     plt.ylabel('True')
     plt.title('Confusion Matrix')
     plt.show()
+    print(f'Verdaderos Positivos: {(TP/len(y))*100:.2f}%, Verdaderos negativos: {(TN/len(y))*100:.2f}%\n Falsos Positivos: {(FP/len(y))*100:.2f}%, Falsos Negativos: {(FN/len(y))*100:.2f}%')
     
     return TP, TN, FP, FN
 def roc_curve(y, y_pred):
@@ -198,7 +212,11 @@ def roc_curve(y, y_pred):
     plt.ylabel('True Positive Rate')
     plt.title('ROC Curve')
     plt.show()
+    # Aerea bajo la curva
+    auc = np.trapz(tpr, fpr)
+    print(f'AUC: {auc}')
     return fpr, tpr
+
 #########################################################################
 #                      Pruebas                                          #
 #########################################################################
@@ -213,22 +231,23 @@ df_y = df['Class']
 
 df_x_train = df_x.iloc[:int(len(df_x)*0.99)]
 df_y_train = df_y.iloc[:int(len(df_y)*0.99)]
-
 df_x_test = df_x.iloc[int(len(df_x)*0.99):]
 df_y_test = df_y.iloc[int(len(df_y)*0.99):]
+
+
 # Inicializar parámetros
 params = np.random.randn(df_x_train.shape[1])
 bias = np.random.rand()
 samples = df_x_train
 y = df_y_train
 
-learning_rate = 1e-1
-epochs = 1e4
+learning_rate = 1e-2
+epochs = 5e3
 
 params, bias = train(params, bias, samples, y, learning_rate, epochs)
 
 predictions = test(params, bias, df_x_test, df_y_test)
-print(confusionMat(df_y_test ,predictions.round()))
+confusionMat(df_y_test ,predictions.round())
 roc_curve(df_y_test, predictions)
 
 # Guardar predicciones
