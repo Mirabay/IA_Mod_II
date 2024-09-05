@@ -33,7 +33,7 @@ X = scaleData(X)
 y = df['Class']
 
 # Split the data into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.02, random_state=42)
 
 # Create and train the Random Forest model
 rf = RandomForestClassifier(
@@ -45,7 +45,6 @@ rf = RandomForestClassifier(
                             min_samples_split=3 # Minimum number of samples required to split an internal node
                             )
 rf.fit(X_train, y_train)
-
 # Make predictions
 y_pred = rf.predict(X_test)
 
@@ -53,7 +52,4 @@ y_pred = rf.predict(X_test)
 accuracy = accuracy_score(y_test, y_pred)
 print(f'Accuracy: {accuracy}')
 confusion_matrix = confusionMat(y_test, y_pred)
-# plot the confusion matrix
-sns.heatmap(confusion_matrix, annot=True, fmt='d')
-plt.show()
 
