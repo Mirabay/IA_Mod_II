@@ -46,7 +46,7 @@ rf = RandomForestClassifier(
                             )
 rf.fit(X_train, y_train)
 # Make predictions
-y_pred = rf.predict(X_test)
+y_pred = rf.predict(X_test)  
 
 # Evaluate the model
 accuracy = accuracy_score(y_test, y_pred)
