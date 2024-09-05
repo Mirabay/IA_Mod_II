@@ -76,9 +76,6 @@ warnings.filterwarnings('ignore', category=UserWarning)  # Ejemplo para ignorar 
 
 
 __errors__ = []
-
-
-
 # Escalado de las características utilizando z-score
 def scale_features(df):
     scaled_df = (df - df.mean()) / df.std(ddof=0)
@@ -187,12 +184,12 @@ def confusionMat(y, y_pred):
     FN = np.sum((y == 1) & (y_pred == 0))
     
     # Graficar matriz de confusión usando seaborn
-    sns.heatmap([[TP, FP], [FN, TN]], annot=True, fmt='d', cmap='Blues', xticklabels=['Positive', 'Negative'], yticklabels=['Positive', 'Negative'])
+    sns.heatmap([[TP, FP], [FN, TN]], annot=True, fmt='d', cmap='Blues', xticklabels=['Ciclo 1', 'Ciclo 0'], yticklabels=['Cicle 1', 'Ciclo 0'])
     plt.xlabel('Predicted')
     plt.ylabel('True')
     plt.title('Confusion Matrix')
     plt.show()
-    print(f'Verdaderos Positivos: {(TP/len(y))*100:.2f}%, Verdaderos negativos: {(TN/len(y))*100:.2f}%\n Falsos Positivos: {(FP/len(y))*100:.2f}%, Falsos Negativos: {(FN/len(y))*100:.2f}%')
+    print(f'Verdaderos Ciclos 1: {(TP/len(y))*100:.2f}%, Verdaderos Ciclo 0: {(TN/len(y))*100:.2f}%\n Falsos Ciclo 1: {(FP/len(y))*100:.2f}%, Falsos Ciclo 0: {(FN/len(y))*100:.2f}%')
     
     return TP, TN, FP, FN
 def roc_curve(y, y_pred):
