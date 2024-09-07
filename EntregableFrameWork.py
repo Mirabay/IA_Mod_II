@@ -36,6 +36,8 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 X_Val = X_train[:int(len(X_train)*0.99)]
 Y_Val = y_train[:int(len(y_train)*0.99)]
 
+plt.style.use('bmh')
+
 #########################################################################
 #                      Random Forest                                    #
 #########################################################################
@@ -44,7 +46,7 @@ Y_Val = y_train[:int(len(y_train)*0.99)]
 os.system('cls')
 
 n_estimators = [10, 50, 100,150,200,250,500]
-train_scores = []
+val_scores = []
 test_scores = []
 
 for n in n_estimators:
@@ -52,19 +54,20 @@ for n in n_estimators:
                                 random_state=42,
                                 n_jobs=-1,
                                 max_depth=8,
+                                min_samples_split=2,
                                 )
     rf.fit(X_train, y_train)
-    TrainAcc=accuracy_score(y_train, rf.predict(X_train))
+    ValAcc=accuracy_score(Y_Val, rf.predict(X_Val))
     TestAcc=accuracy_score(y_test, rf.predict(X_test))
     print(f'Training Random Forest with {n} trees')
-    print(f'Train Accuracy: {TrainAcc}')
-    print(f'Test Accuracy: {TestAcc}')
+    print(f'Validation Accuracy: {ValAcc:.2f}')
+    print(f'Test Accuracy: {TestAcc:.2f}')
     print('-----------------------------------')
-    train_scores.append(TrainAcc)
+    val_scores.append(ValAcc)
     test_scores.append(TestAcc)
 
 # Visualiza los resultados
-plt.plot(n_estimators, train_scores, label='Train Accuracy')
+plt.plot(n_estimators, val_scores, label='Val Accuracy')
 plt.plot(n_estimators, test_scores, label='Test Accuracy')
 plt.xlabel('Number of Trees')
 plt.ylabel('Accuracy')
@@ -78,34 +81,69 @@ rf = RandomForestClassifier(n_estimators=best_n,
                             random_state=42,
                             n_jobs=-1,
                             max_depth=8,
+                            min_samples_split=2,
                         )
 rf.fit(X_train, y_train)
 
-y_pred = rf.predict(X_Val)
-rf_cm = confusion_matrix(Y_Val, y_pred)
+plt.figure(figsize=(12, 5))
+plt.subplot(1, 2, 1)
+rf_pred_val = rf.predict(X_Val)
+rf_cm = confusion_matrix(Y_Val, rf_pred_val)
 sns.heatmap(rf_cm, annot=True, fmt='d', cmap='Blues')
-plt.title('Random Forest Confusion MatrixTrain')
-roc=roc_curve(Y_Val, y_pred)
+plt.title('Random Forest Validation Confusion Matrix')
+plt.subplot(1, 2, 2)
+rf_pred = rf.predict(X_test)
+rf_cm = confusion_matrix(y_test, rf_pred)
+sns.heatmap(rf_cm, annot=True, fmt='d', cmap='Blues')
+plt.title('Random Forest Test Confusion Matrix')
 plt.show()
+
+# plot ROC Curve
+
+plt.figure(figsize=(10, 5))
+plt.subplot(1, 2, 1)
+fpr, tpr, _ = roc_curve(Y_Val, rf_pred_val)
+auc_score = auc(fpr, tpr)
+plt.plot(fpr, tpr, label=f'Random Forest (AUC = {auc_score:.2f})')
+plt.plot([0, 1], [0, 1], 'k--')
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC Curve Validation')
+plt.legend()
+plt.subplot(1, 2, 2)
+fpr, tpr, _ = roc_curve(y_test, rf_pred)
+auc_score = auc(fpr, tpr)
+plt.plot(fpr, tpr, label=f'Random Forest (AUC = {auc_score:.2f})')
+plt.plot([0, 1], [0, 1], 'k--')
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC Curve Test')
+plt.legend()
+plt.show()
+
+
 #########################################################################
 #                      Neural Network                                   #
 #########################################################################
 
 # Limpiar Terminal
 os.system('cls')
-# Convertir los DF a numpy arrays
-
 # Convertir los datos a tensores de PyTorch
-X_train = torch.tensor(X_train, dtype=torch.float32)
-X_test = torch.tensor(X_test, dtype=torch.float32)
+if torch.cuda.is_available():
+    print('CUDA is available!  Training on GPU ...')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# Convertir los datos a tensores de PyTorch
+X_train = torch.tensor(X_train, dtype=torch.float32).to(device)
+X_test = torch.tensor(X_test, dtype=torch.float32).to(device)
+X_Val = torch.tensor(X_Val, dtype=torch.float32).to(device)
+
 
 y_train = y_train.values
 y_test = y_test.values
-y_train = torch.tensor(y_train, dtype=torch.long)
-y_test = torch.tensor(y_test, dtype=torch.long)
-
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-X_train, X_test, y_train, y_test = X_train.to(device), X_test.to(device), y_train.to(device), y_test.to(device)
+Y_Val = Y_Val.values
+y_train = torch.tensor(y_train, dtype=torch.long).to(device)
+y_test = torch.tensor(y_test, dtype=torch.long).to(device)
+Y_Val = torch.tensor(Y_Val, dtype=torch.long).to(device)
 
 # Definir la red neuronal
 input_size = X_train.shape[1]
@@ -131,6 +169,8 @@ optimizer = optim.Adam(model.parameters(), lr=0.0001)
 # Entrenamiento de la red neuronal
 num_epochs = 35000
 train_losses = []
+val_accs = []
+test_accs = []
 
 for epoch in range(num_epochs):
     model.train()
@@ -146,6 +186,8 @@ for epoch in range(num_epochs):
     
     # Guardar la pérdida para graficarla
     train_losses.append(loss.item())
+    val_accs.append(accuracy_score(Y_Val, model(X_Val).argmax(dim=1).cpu().numpy()))
+    test_accs.append(accuracy_score(y_test, model(X_test).argmax(dim=1).cpu().numpy()))
     
     # Mostrar el progreso
     if (epoch+1) % 100 == 0:
@@ -153,61 +195,83 @@ for epoch in range(num_epochs):
     if len(train_losses) > 1 and abs(train_losses[-1] - train_losses[-2]) < 1e-6:
         break
 
+plt.figure(figsize=(12, 5))
+plt.subplot(1, 2, 1)
 # Graficar la curva de pérdida
 plt.plot(train_losses)
 plt.title('Training Loss Curve')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
+plt.subplot(1, 2, 2)
+# Graficar la precisión en el conjunto de validación
+plt.plot(val_accs, label='Validation Accuracy')
+plt.plot(test_accs, label='Test Accuracy')
+plt.title('Validation Accuracy Curve')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend()
 plt.show()
 
 # Durante la evaluación:
 model.eval()
 with torch.no_grad():
-    outputs = model(X_test)
-    _, nn_pred = torch.max(outputs, 1)  # Obtener las predicciones de la red neuronal
-    nn_pred = nn_pred.cpu().numpy()     # Convertir a NumPy array
-#########################################################################
-#                      Evaluación de los modelos                        #
-#########################################################################
-# Evaluación usando Sklearn
-rf_pred = rf.predict(X_test.cpu().numpy())  # Random Forest predicciones
-y_test_np = y_test.cpu().numpy()            # Convertir a numpy array para compatibilidad
-
-rf_accuracy = accuracy_score(y_test_np, rf_pred)
-nn_accuracy = accuracy_score(y_test_np, nn_pred)
-
-print(f'Random Forest Accuracy: {rf_accuracy}')
-print(f'Neural Network Accuracy: {nn_accuracy}')
+    valOutputs = model(X_Val)
+    testOutputs = model(X_test)
+    nn_pred_Val = valOutputs.argmax(dim=1).cpu().numpy()
+    nn_pred_test = testOutputs.argmax(dim=1).cpu().numpy()
 
 # Matriz de Confusión
-rf_cm = confusion_matrix(y_test, rf_pred)
-nn_cm = confusion_matrix(y_test, nn_pred)
-
 plt.figure(figsize=(12, 5))
-
 plt.subplot(1, 2, 1)
-sns.heatmap(rf_cm, annot=True, fmt='d', cmap='Blues')
-plt.title('Random Forest Confusion Matrix')
-
-plt.subplot(1, 2, 2)
+nn_cm = confusion_matrix(Y_Val, nn_pred_Val)
 sns.heatmap(nn_cm, annot=True, fmt='d', cmap='Blues')
-plt.title('Neural Network Confusion Matrix')
-
+plt.title('Neural Network Validation Confusion Matrix')
+plt.subplot(1, 2, 2)
+nn_cm = confusion_matrix(y_test, nn_pred_test)
+sns.heatmap(nn_cm, annot=True, fmt='d', cmap='Blues')
+plt.title('Neural Network Test Confusion Matrix')
 plt.show()
 
-# Curva ROC y AUC
-rf_fpr, rf_tpr, _ = roc_curve(y_test, rf.predict_proba(X_test)[:, 1])
-nn_fpr, nn_tpr, _ = roc_curve(y_test, nn_pred)
-
-rf_auc = auc(rf_fpr, rf_tpr)
-nn_auc = auc(nn_fpr, nn_tpr)
-
+# ROC Curve
 plt.figure(figsize=(10, 5))
-plt.plot(rf_fpr, rf_tpr, label=f'Random Forest (AUC = {rf_auc:.2f})')
+plt.subplot(1, 2, 1)
+nn_fpr, nn_tpr, _ = roc_curve(Y_Val, valOutputs[:, 1].cpu().numpy())
+nn_auc = auc(nn_fpr, nn_tpr)
 plt.plot(nn_fpr, nn_tpr, label=f'Neural Network (AUC = {nn_auc:.2f})')
 plt.plot([0, 1], [0, 1], 'k--')
 plt.xlabel('False Positive Rate')
 plt.ylabel('True Positive Rate')
-plt.title('ROC Curve')
+plt.title('ROC Curve Validation')
+plt.legend()
+plt.subplot(1, 2, 2)
+nn_fpr, nn_tpr, _ = roc_curve(y_test, testOutputs[:, 1].cpu().numpy())
+nn_auc = auc(nn_fpr, nn_tpr)
+plt.plot(nn_fpr, nn_tpr, label=f'Neural Network (AUC = {nn_auc:.2f})')
+plt.plot([0, 1], [0, 1], 'k--')
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC Curve Test')
 plt.legend()
 plt.show()
+os.system('cls')
+
+# Evaluación de los modelos
+print('Random Forest Evaluation')
+print('-----------------------')
+print(f'Validation Accuracy: {accuracy_score(Y_Val, rf_pred_val):.2f}')
+print(f'Test Accuracy: {accuracy_score(y_test, rf_pred):.2f}')
+print(f'False Positive Rate: {fpr[1]:.2f}')
+print(f'True Positive Rate: {tpr[1]:.2f}')
+print(f'Validation AUC: {auc(fpr, tpr):.2f}')
+print(f'Test AUC: {auc(fpr, tpr):.2f}')
+print('-----------------------')
+
+print('Neural Network Evaluation')
+print('-----------------------')
+print(f'Validation Accuracy: {accuracy_score(Y_Val, nn_pred_Val):.2f}')
+print(f'Test Accuracy: {accuracy_score(y_test, nn_pred_test):.2f}')
+print(f'False Positive Rate: {nn_fpr[1]:.2f}')
+print(f'True Positive Rate: {nn_tpr[1]:.2f}')
+print(f'Validation AUC: {nn_auc:.2f}')
+print(f'Test AUC: {nn_auc:.2f}')
+print('-----------------------')

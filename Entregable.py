@@ -76,6 +76,8 @@ warnings.filterwarnings('ignore', category=UserWarning)  # Ejemplo para ignorar 
 
 
 __errors__ = []
+__Validation__ = []
+__Test__ = []
 # Escalado de las características utilizando z-score
 def scale_features(df):
     scaled_df = (df - df.mean()) / df.std(ddof=0)
@@ -114,7 +116,7 @@ def Gradiente_Descendiente(params, bias, samples, y, alfa):
     return params, bias
 
 # Entrenamiento
-def train(params, bias, samples, y, learning_rate, epochs):
+def train(params, bias, samples, y, learning_rate, epochs,testX,testY):
     global __errors__
 
     val_samples = samples[:int(len(samples)*0.99)]
@@ -126,6 +128,9 @@ def train(params, bias, samples, y, learning_rate, epochs):
         # Mostrar errores
         error = CostFunction(params, samples, bias, y)
         val_accuracy = validate(params, bias, val_samples, val_y)
+        __Validation__.append(val_accuracy)
+        __Test__.append(validate(params, bias, testX, testY))
+    
         sys.stdout.write(f'\rEpoch: {(epoch/epochs)*100:.2f}%,Loss: {error*100:.2f}%,Validation Acurracy: {val_accuracy*100:.2f}%')
         
         sys.stdout.flush()
@@ -136,21 +141,33 @@ def train(params, bias, samples, y, learning_rate, epochs):
             break
     
     # Graficar errores
+    plt.figure(figsize=(10, 6))
+    plt.subplot(1, 2, 1)
     plt.plot(range(len(__errors__)), __errors__)
     plt.plot(range(len(__errors__)), [0.5] * len(__errors__), '--r')
     plt.title('Error vs Epochs')
     plt.xlabel('Epochs')
     plt.ylabel('Error')
+    plt.subplot(1, 2, 2)
+    plt.plot(range(len(__Validation__)), __Validation__)
+    plt.plot(range(len(__Test__)), __Test__)
+    plt.title('Validation Accuracy vs Epochs')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.legend(['Validation', 'Test'])
     plt.show()
-    
-    # Mostrar graficas de validación
+    # Mostrar graficas de validación y Test
     print('\nValidation:')
     val_hyp = h(params, val_samples, bias)
+    test_hyp = h(params, testX, bias)
     val_accuracy = np.mean(val_hyp.round() == val_y)
+    test_accuracy = np.mean(test_hyp.round() == testY)
     print(f'Validation Accuracy: {val_accuracy * 100:.1f}%')
-    confusionMat(val_y, val_hyp.round())
-    roc_curve(val_y, val_hyp)
+    print(f'Test Accuracy: {test_accuracy * 100:.1f}%')
+    confusionMat(val_y, val_hyp.round(), testY, test_hyp.round())
     
+    roc_curve(val_y, val_hyp, testY, test_hyp)
+
     return params, bias
 
 def test(params, bias, samples, y):
@@ -177,24 +194,37 @@ def test(params, bias, samples, y):
     plt.show()
     return hyp
 
-def confusionMat(y, y_pred):
+def confusionMat(y, y_pred, y_test, y_pred_test):
     TP = np.sum((y == 1) & (y_pred == 1))
     TN = np.sum((y == 0) & (y_pred == 0))
     FP = np.sum((y == 0) & (y_pred == 1))
     FN = np.sum((y == 1) & (y_pred == 0))
     
+    TTP = np.sum((y_test == 1) & (y_pred_test == 1))
+    TTN = np.sum((y_test == 0) & (y_pred_test == 0))
+    TFP = np.sum((y_test == 0) & (y_pred_test == 1))
+    TFN = np.sum((y_test == 1) & (y_pred_test == 0))
     # Graficar matriz de confusión usando seaborn
+    plt.figure(figsize=(10, 6))
+    plt.subplot(1, 2, 1)
     sns.heatmap([[TP, FP], [FN, TN]], annot=True, fmt='d', cmap='Blues', xticklabels=['Ciclo 1', 'Ciclo 0'], yticklabels=['Cicle 1', 'Ciclo 0'])
     plt.xlabel('Predicted')
     plt.ylabel('True')
-    plt.title('Confusion Matrix')
+    plt.title('Validation Confusion Matrix')
+    plt.subplot(1, 2, 2)
+    sns.heatmap([[TTP, TFP], [TFN, TTN]], annot=True, fmt='d', cmap='Blues', xticklabels=['Ciclo 1', 'Ciclo 0'], yticklabels=['Cicle 1', 'Ciclo 0'])
+    plt.xlabel('Predicted')
+    plt.ylabel('True')
+    plt.title('Test Confusion Matrix')
     plt.show()
-    print(f'Verdaderos Ciclos 1: {(TP/len(y))*100:.2f}%, Verdaderos Ciclo 0: {(TN/len(y))*100:.2f}%\n Falsos Ciclo 1: {(FP/len(y))*100:.2f}%, Falsos Ciclo 0: {(FN/len(y))*100:.2f}%')
-    
+    print(f'Validation:\nVerdaderos Ciclos 1: {(TP/len(y))*100:.2f}%, Verdaderos Ciclo 0: {(TN/len(y))*100:.2f}%\n Falsos Ciclo 1: {(FP/len(y))*100:.2f}%, Falsos Ciclo 0: {(FN/len(y))*100:.2f}%')
+    print(f'Test:\nVerdaderos Ciclos 1: {(TTP/len(y_test))*100:.2f}%, Verdaderos Ciclo 0: {(TTN/len(y_test))*100:.2f}%\n Falsos Ciclo 1: {(TFP/len(y_test))*100:.2f}%, Falsos Ciclo 0: {(TFN/len(y_test))*100:.2f}%')
     return TP, TN, FP, FN
-def roc_curve(y, y_pred):
+def roc_curve(y, y_pred,y_test, y_pred_test):
     fpr = []
     tpr = []
+    Tfpr = []
+    Ttpr = []
     for threshold in np.linspace(0, 1, 100):
         y_pred_round = y_pred > threshold
         TP = np.sum((y == 1) & (y_pred_round == 1))
@@ -203,11 +233,29 @@ def roc_curve(y, y_pred):
         FN = np.sum((y == 1) & (y_pred_round == 0))
         fpr.append(FP / (FP + TN))
         tpr.append(TP / (TP + FN))
+    for threshold in np.linspace(0, 1, 100):
+        y_pred_round = y_pred_test > threshold
+        TP = np.sum((y_test == 1) & (y_pred_round == 1))
+        TN = np.sum((y_test == 0) & (y_pred_round == 0))
+        FP = np.sum((y_test == 0) & (y_pred_round == 1))
+        FN = np.sum((y_test == 1) & (y_pred_round == 0))
+        Tfpr.append(FP / (FP + TN))
+        Ttpr.append(TP / (TP + FN))
+    plt.figure(figsize=(10, 6))
+    plt.subplot(1, 2, 1)
     plt.plot(fpr, tpr)
     plt.plot([0, 1], [0, 1], '--r')
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
-    plt.title('ROC Curve')
+    plt.title('Validation ROC Curve')
+    plt.legend(f'AUC: {np.trapz(tpr, fpr):.2f}')
+    plt.subplot(1, 2, 2)
+    plt.plot(Tfpr, Ttpr)
+    plt.plot([0, 1], [0, 1], '--r')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Test ROC Curve')
+    plt.legend(f'AUC: {np.trapz(Ttpr, Tfpr):.2f}')	
     plt.show()
     # Aerea bajo la curva
     auc = np.trapz(tpr, fpr)
@@ -241,14 +289,5 @@ y = df_y_train
 learning_rate = 1e-2
 epochs = 5e3
 
-params, bias = train(params, bias, samples, y, learning_rate, epochs)
-
-predictions = test(params, bias, df_x_test, df_y_test)
-confusionMat(df_y_test ,predictions.round())
-roc_curve(df_y_test, predictions)
-
-# Guardar predicciones
-df_x_test['Class'] = df_y_test
-df_x_test['Predictions'] = predictions
-
-df_x_test.to_csv('Data_Sets/Predictions.csv', index=False)
+params, bias = train(params, bias, samples, y, learning_rate, epochs,df_x_test,df_y_test)
+test(params, bias, df_x_test, df_y_test)
