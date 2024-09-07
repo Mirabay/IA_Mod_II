@@ -186,8 +186,11 @@ for epoch in range(num_epochs):
     
     # Guardar la pérdida para graficarla
     train_losses.append(loss.item())
-    val_accs.append(accuracy_score(Y_Val, model(X_Val).argmax(dim=1).cpu().numpy()))
-    test_accs.append(accuracy_score(y_test, model(X_test).argmax(dim=1).cpu().numpy()))
+    
+    # Move tensors to CPU before converting to NumPy arrays
+    val_accs.append(accuracy_score(Y_Val.cpu().numpy(), model(X_Val).argmax(dim=1).cpu().numpy()))
+    test_accs.append(accuracy_score(y_test.cpu().numpy(), model(X_test).argmax(dim=1).cpu().numpy()))
+
     
     # Mostrar el progreso
     if (epoch+1) % 100 == 0:
@@ -220,6 +223,7 @@ with torch.no_grad():
     nn_pred_Val = valOutputs.argmax(dim=1).cpu().numpy()
     nn_pred_test = testOutputs.argmax(dim=1).cpu().numpy()
 
+
 # Matriz de Confusión
 plt.figure(figsize=(12, 5))
 plt.subplot(1, 2, 1)
@@ -235,7 +239,7 @@ plt.show()
 # ROC Curve
 plt.figure(figsize=(10, 5))
 plt.subplot(1, 2, 1)
-nn_fpr, nn_tpr, _ = roc_curve(Y_Val, valOutputs[:, 1].cpu().numpy())
+nn_fpr, nn_tpr, _ = roc_curve(Y_Val.cpu().numpy(), valOutputs[:, 1].cpu().numpy())
 nn_auc = auc(nn_fpr, nn_tpr)
 plt.plot(nn_fpr, nn_tpr, label=f'Neural Network (AUC = {nn_auc:.2f})')
 plt.plot([0, 1], [0, 1], 'k--')
@@ -244,7 +248,7 @@ plt.ylabel('True Positive Rate')
 plt.title('ROC Curve Validation')
 plt.legend()
 plt.subplot(1, 2, 2)
-nn_fpr, nn_tpr, _ = roc_curve(y_test, testOutputs[:, 1].cpu().numpy())
+nn_fpr, nn_tpr, _ = roc_curve(y_test.cpu().numpy(), testOutputs[:, 1].cpu().numpy())
 nn_auc = auc(nn_fpr, nn_tpr)
 plt.plot(nn_fpr, nn_tpr, label=f'Neural Network (AUC = {nn_auc:.2f})')
 plt.plot([0, 1], [0, 1], 'k--')
