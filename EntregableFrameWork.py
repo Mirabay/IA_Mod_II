@@ -191,7 +191,7 @@ for epoch in range(num_epochs):
     
     # Mostrar el progreso
     if (epoch+1) % 100 == 0:
-        print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
+        print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Validation Accuracy: {val_accs[-1]:.4f}')
     if len(train_losses) > 1 and abs(train_losses[-1] - train_losses[-2]) < 1e-6:
         break
 
