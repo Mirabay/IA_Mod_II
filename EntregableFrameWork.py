@@ -42,84 +42,93 @@ plt.style.use('bmh')
 #                      Random Forest                                    #
 #########################################################################
 
-# Limpiar Terminal
-os.system('cls')
+# # Limpiar Terminal
+# os.system('cls')
 
-n_estimators = [10, 50, 100,150,200,250,500]
-val_scores = []
-test_scores = []
+# n_estimators = [10, 50, 100,150,200,250,500]
+# val_scores = []
+# test_scores = []
 
-for n in n_estimators:
-    rf = RandomForestClassifier(n_estimators=n,
-                                random_state=42,
-                                n_jobs=-1,
-                                max_depth=8,
-                                min_samples_split=2,
-                                )
-    rf.fit(X_train, y_train)
-    ValAcc=accuracy_score(Y_Val, rf.predict(X_Val))
-    TestAcc=accuracy_score(y_test, rf.predict(X_test))
-    print(f'Training Random Forest with {n} trees')
-    print(f'Validation Accuracy: {ValAcc:.4f}')
-    print(f'Test Accuracy: {TestAcc:.4f}')
-    print('-----------------------------------')
-    val_scores.append(ValAcc)
-    test_scores.append(TestAcc)
+# for n in n_estimators:
+#     rf = RandomForestClassifier(n_estimators=n,
+#                                 random_state=42,
+#                                 n_jobs=-1,
+#                                 max_depth=8,
+#                                 min_samples_split=2,
+#                                 )
+#     rf.fit(X_train, y_train)
+#     ValAcc=accuracy_score(Y_Val, rf.predict(X_Val))
+#     TestAcc=accuracy_score(y_test, rf.predict(X_test))
+#     print(f'Training Random Forest with {n} trees')
+#     print(f'Validation Accuracy: {ValAcc:.4f}')
+#     print(f'Test Accuracy: {TestAcc:.4f}')
+#     print('-----------------------------------')
+#     val_scores.append(ValAcc)
+#     test_scores.append(TestAcc)
 
-# Visualiza los resultados
-plt.plot(n_estimators, val_scores, label='Val Accuracy')
-plt.plot(n_estimators, test_scores, label='Test Accuracy')
-plt.xlabel('Number of Trees')
-plt.ylabel('Accuracy')
-plt.legend()
-plt.show()
-# Mostrar el mejor modelo
-best_n = n_estimators[np.argmax(test_scores)]
-print(f'Best Random Forest with {best_n} trees')
-# Matiz de Confusión del mejor modelo
-rf = RandomForestClassifier(n_estimators=best_n,
-                            random_state=42,
-                            n_jobs=-1,
-                            max_depth=8,
-                            min_samples_split=2,
-                        )
-rf.fit(X_train, y_train)
+# # Visualiza los resultados
+# plt.plot(n_estimators, val_scores, label='Val Accuracy')
+# plt.plot(n_estimators, test_scores, label='Test Accuracy')
+# plt.xlabel('Number of Trees')
+# plt.ylabel('Accuracy')
+# plt.legend()
+# plt.show()
+# # Mostrar el mejor modelo
+# best_n = n_estimators[np.argmax(test_scores)]
+# print(f'Best Random Forest with {best_n} trees')
+# # Matiz de Confusión del mejor modelo
+# rf = RandomForestClassifier(n_estimators=best_n,
+#                             random_state=42,
+#                             n_jobs=-1,
+#                             max_depth=8,
+#                             min_samples_split=2,
+#                         )
+# rf.fit(X_train, y_train)
 
-plt.figure(figsize=(12, 5))
-plt.subplot(1, 2, 1)
-rf_pred_val = rf.predict(X_Val)
-rf_cm = confusion_matrix(Y_Val, rf_pred_val)
-sns.heatmap(rf_cm, annot=True, fmt='d', cmap='Blues', xticklabels=['Ciclo 1', 'Ciclo 0'], yticklabels=['Cicle 1', 'Ciclo 0'])
-plt.title('Random Forest Validation Confusion Matrix')
-plt.subplot(1, 2, 2)
-rf_pred = rf.predict(X_test)
-rf_cm = confusion_matrix(y_test, rf_pred)
-sns.heatmap(rf_cm, annot=True, fmt='d', cmap='Blues', xticklabels=['Ciclo 1', 'Ciclo 0'], yticklabels=['Cicle 1', 'Ciclo 0'])
-plt.title('Random Forest Test Confusion Matrix')
-plt.show()
+# plt.figure(figsize=(12, 5))
+# plt.subplot(1, 2, 1)
+# rf_pred_val = rf.predict(X_Val)
+# rf_cm = confusion_matrix(Y_Val, rf_pred_val)
+# sns.heatmap(rf_cm, annot=True, fmt='d', cmap='Blues', xticklabels=['Ciclo 1', 'Ciclo 0'], yticklabels=['Cicle 1', 'Ciclo 0'])
+# plt.title('Random Forest Validation Confusion Matrix')
+# plt.subplot(1, 2, 2)
+# rf_pred = rf.predict(X_test)
+# rf_cm = confusion_matrix(y_test, rf_pred)
+# sns.heatmap(rf_cm, annot=True, fmt='d', cmap='Blues', xticklabels=['Ciclo 1', 'Ciclo 0'], yticklabels=['Cicle 1', 'Ciclo 0'])
+# plt.title('Random Forest Test Confusion Matrix')
+# plt.show()
 
-# plot ROC Curve
+# # plot ROC Curve
 
-plt.figure(figsize=(10, 5))
-plt.subplot(1, 2, 1)
-fpr, tpr, _ = roc_curve(Y_Val, rf_pred_val)
-auc_score = auc(fpr, tpr)
-plt.plot(fpr, tpr, label=f'Random Forest (AUC = {auc_score:.2f})')
-plt.plot([0, 1], [0, 1], 'k--')
-plt.xlabel('False Positive Rate')
-plt.ylabel('True Positive Rate')
-plt.title('ROC Curve Validation')
-plt.legend()
-plt.subplot(1, 2, 2)
-fpr, tpr, _ = roc_curve(y_test, rf_pred)
-auc_score = auc(fpr, tpr)
-plt.plot(fpr, tpr, label=f'Random Forest (AUC = {auc_score:.2f})')
-plt.plot([0, 1], [0, 1], 'k--')
-plt.xlabel('False Positive Rate')
-plt.ylabel('True Positive Rate')
-plt.title('ROC Curve Test')
-plt.legend()
-plt.show()
+# plt.figure(figsize=(10, 5))
+# plt.subplot(1, 2, 1)
+# fpr, tpr, _ = roc_curve(Y_Val, rf_pred_val)
+# auc_score = auc(fpr, tpr)
+# plt.plot(fpr, tpr, label=f'Random Forest (AUC = {auc_score:.2f})')
+# plt.plot([0, 1], [0, 1], 'k--')
+# plt.xlabel('False Positive Rate')
+# plt.ylabel('True Positive Rate')
+# plt.title('ROC Curve Validation')
+# plt.legend()
+# plt.subplot(1, 2, 2)
+# fpr, tpr, _ = roc_curve(y_test, rf_pred)
+# auc_score = auc(fpr, tpr)
+# plt.plot(fpr, tpr, label=f'Random Forest (AUC = {auc_score:.2f})')
+# plt.plot([0, 1], [0, 1], 'k--')
+# plt.xlabel('False Positive Rate')
+# plt.ylabel('True Positive Rate')
+# plt.title('ROC Curve Test')
+# plt.legend()
+# print('Random Forest Evaluation')
+# print('-----------------------')
+# print(f'Validation Accuracy: {accuracy_score(Y_Val.cpu(), rf_pred_val):.2f}')
+# print(f'Test Accuracy: {accuracy_score(y_test.cpu(), rf_pred):.2f}')
+# print(f'False Positive Rate: {fpr[1]:.2f}')
+# print(f'True Positive Rate: {tpr[1]:.2f}')
+# print(f'Validation AUC: {auc(fpr, tpr):.2f}')
+# print(f'Test AUC: {auc(fpr, tpr):.2f}')
+# print('-----------------------')
+# plt.show()
 
 
 #########################################################################
@@ -215,25 +224,33 @@ plt.ylabel('Accuracy')
 plt.legend()
 plt.show()
 
-# Durante la evaluación:
+
+# During evaluation:
 model.eval()
 with torch.no_grad():
-    valOutputs = model(X_Val)
-    testOutputs = model(X_test)
-    nn_pred_Val = valOutputs.argmax(dim=1).cpu().numpy()
-    nn_pred_test = testOutputs.argmax(dim=1).cpu().numpy()
-
+    valOutputs = model(X_Val).cpu()
+    testOutputs = model(X_test).cpu()
+    nn_pred_Val = valOutputs.argmax(dim=1).numpy()
+    nn_pred_test = testOutputs.argmax(dim=1).numpy()
 
 # Matriz de Confusión
 plt.figure(figsize=(12, 5))
 plt.subplot(1, 2, 1)
-nn_cm = confusion_matrix(Y_Val.cpu(), nn_pred_Val)
-sns.heatmap(nn_cm, annot=True, fmt='d', cmap='Blues', xticklabels=['Ciclo 1', 'Ciclo 0'], yticklabels=['Cicle 1', 'Ciclo 0'])
-plt.title('Neural Network Validation Confusion Matrix')
+nn_cm = confusion_matrix(Y_Val.cpu().numpy(), nn_pred_Val)
+plt.title('Confusion Matrix - Validation')
+plt.xlabel('Predicted')
+plt.ylabel('True')
+plt.imshow(nn_cm, interpolation='nearest', cmap=plt.cm.Blues,)
+plt.colorbar()
+
 plt.subplot(1, 2, 2)
-nn_cm = confusion_matrix(y_test.cpu(), nn_pred_test)
-sns.heatmap(nn_cm, annot=True, fmt='d', cmap='Blues', xticklabels=['Ciclo 1', 'Ciclo 0'], yticklabels=['Cicle 1', 'Ciclo 0'])
-plt.title('Neural Network Test Confusion Matrix')
+nn_cm_test = confusion_matrix(y_test.cpu().numpy(), nn_pred_test)
+plt.title('Confusion Matrix - Test')
+plt.xlabel('Predicted')
+plt.ylabel('True')
+plt.imshow(nn_cm_test, interpolation='nearest', cmap=plt.cm.Blues)
+plt.colorbar()
+
 plt.show()
 
 # ROC Curve
@@ -260,15 +277,7 @@ plt.show()
 os.system('cls')
 
 # Evaluación de los modelos
-print('Random Forest Evaluation')
-print('-----------------------')
-print(f'Validation Accuracy: {accuracy_score(Y_Val.cpu(), rf_pred_val):.2f}')
-print(f'Test Accuracy: {accuracy_score(y_test.cpu(), rf_pred):.2f}')
-print(f'False Positive Rate: {fpr[1]:.2f}')
-print(f'True Positive Rate: {tpr[1]:.2f}')
-print(f'Validation AUC: {auc(fpr, tpr):.2f}')
-print(f'Test AUC: {auc(fpr, tpr):.2f}')
-print('-----------------------')
+
 
 print('Neural Network Evaluation')
 print('-----------------------')
